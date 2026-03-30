@@ -24,11 +24,24 @@ const require = createRequire(import.meta.url);
 const admin = require("firebase-admin");
 const serviceAccount = loadServiceAccount();
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+let firestore: any = null;
 
-const firestore = admin.firestore();
+if (serviceAccount) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    firestore = admin.firestore();
+    console.log("[server] Firebase Admin initialised successfully.");
+  } catch (err) {
+    console.error("[server] Firebase Admin initialisation failed:", err);
+  }
+} else {
+  console.error(
+    "[server] Firebase Admin was NOT initialised — service account unavailable. " +
+      "All Firestore operations will fail until FIREBASE_SERVICE_ACCOUNT_JSON is set correctly."
+  );
+}
 
 const app = express();
 const server = http.createServer(app);
