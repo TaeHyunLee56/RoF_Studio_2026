@@ -251,7 +251,7 @@
         <video id="speakingVideo" muted playsinline></video>
         <video id="closingVideo" playsinline></video>
         <audio id="backgroundMusic" loop preload="none">
-            <source src="http://143.248.107.38:8186/2026_RoF_output/In%20the%20Time%20Slip%20Tunnel.mp3" type="audio/mpeg">
+            <source src="/media-proxy/2026_RoF_output/In%20the%20Time%20Slip%20Tunnel.mp3" type="audio/mpeg">
         </audio>
     </div>
 
@@ -700,7 +700,7 @@
                 if (listeningVideo) listeningVideo.classList.remove('active');
                 if (speakingVideo) speakingVideo.classList.remove('active');
                 
-                tunnelVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/tunnel.mp4';
+                tunnelVideo.src = '/media-proxy/2026_RoF_output/tunnel.mp4';
                 tunnelVideo.classList.add('active');
 
                 let isResolved = false;
@@ -797,7 +797,7 @@
                 closingFadeOverlay.classList.remove('fade-out');
                 // opacity: 1 상태로 화면이 검정색
 
-                closingVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/closing.mp4';
+                closingVideo.src = '/media-proxy/2026_RoF_output/closing.mp4';
                 closingVideo.classList.add('active');
 
                 closingVideo.onloadeddata = () => {

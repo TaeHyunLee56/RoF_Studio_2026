@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import http from "http";
+import { Readable } from "stream";
 import { Server } from "socket.io";
 import session from "express-session";
 import * as path from "path";
@@ -33,6 +34,75 @@ const firestore = admin.firestore();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+// HTTP 미디어 서버 (Mixed Content 방지: 브라우저는 HTTPS 앱 → /media-proxy → 이 원본으로만 요청)
+const MEDIA_ORIGIN_URL = (
+  process.env.MEDIA_ORIGIN_URL || "http://143.248.107.38:8186"
+).replace(/\/$/, "");
+
+/** Firestore 등에 저장된 절대 URL을 같은 출처 프록시 경로로 바꿈 */
+function rewriteMediaUrlForClient(
+  url: string | null | undefined
+): string | null {
+  if (url == null || String(url).trim() === "") return null;
+  const u = String(url).trim();
+  if (u.startsWith("/media-proxy")) return u;
+  try {
+    const parsed = new URL(u);
+    const base = new URL(`${MEDIA_ORIGIN_URL}/`);
+    if (parsed.origin === base.origin) {
+      return `/media-proxy${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    const prefix = MEDIA_ORIGIN_URL;
+    if (u.startsWith(prefix)) {
+      const rest = u.slice(prefix.length);
+      return `/media-proxy${rest.startsWith("/") ? rest : `/${rest}`}`;
+    }
+  }
+  return u;
+}
+
+app.use("/media-proxy", async (req, res) => {
+  let suffix = req.originalUrl.replace(/^\/media-proxy/, "") || "/";
+  if (!suffix.startsWith("/")) suffix = `/${suffix}`;
+  const targetUrl = `${MEDIA_ORIGIN_URL}${suffix}`;
+  try {
+    const headers = new Headers();
+    if (req.headers.range) headers.set("Range", String(req.headers.range));
+    const upstream = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      redirect: "follow",
+    });
+
+    const forwardNames = [
+      "content-type",
+      "content-length",
+      "content-range",
+      "accept-ranges",
+      "cache-control",
+    ];
+    for (const name of forwardNames) {
+      const v = upstream.headers.get(name);
+      if (v) res.setHeader(name, v);
+    }
+    res.status(upstream.status);
+
+    if (upstream.status === 204 || upstream.body == null) {
+      res.end();
+      return;
+    }
+
+    const body = upstream.body as import("stream/web").ReadableStream<Uint8Array>;
+    Readable.fromWeb(body).pipe(res);
+  } catch (err) {
+    console.error("[media-proxy]", targetUrl, err);
+    if (!res.headersSent) {
+      res.status(502).type("text/plain").send("미디어 프록시 오류");
+    }
+  }
+});
 
 // ─── 미들웨어 ───
 app.use(express.json());
@@ -339,8 +409,8 @@ app.get("/api/video-data", async (req, res) => {
     res.json({
       success: true,
       videoData: {
-        listeningUrl,
-        speakingUrl,
+        listeningUrl: rewriteMediaUrlForClient(listeningUrl),
+        speakingUrl: rewriteMediaUrlForClient(speakingUrl),
       },
     });
   } catch (error: any) {

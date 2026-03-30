@@ -252,7 +252,7 @@
         <video id="speakingVideo" loop muted playsinline></video>
         <video id="closingVideo" playsinline></video>
         <audio id="backgroundMusic" loop preload="auto">
-            <source src="http://143.248.107.38:8186/2026_RoF_output/In%20the%20Time%20Slip%20Tunnel.mp3" type="audio/mpeg">
+            <source src="/media-proxy/2026_RoF_output/In%20the%20Time%20Slip%20Tunnel.mp3" type="audio/mpeg">
         </audio>
         <!-- <div class="screensaver" id="screensaver">비디오를 불러오는 중...</div> -->
     </div>
@@ -566,7 +566,7 @@
                 if (speakingVideo) speakingVideo.classList.remove('active');
                 
                 // tunnel 비디오 설정 및 재생
-                tunnelVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/tunnel.mp4';
+                tunnelVideo.src = '/media-proxy/2026_RoF_output/tunnel.mp4';
                 tunnelVideo.classList.add('active');
 
                 // 이미 로드된 경우를 대비한 플래그
@@ -672,7 +672,7 @@
                 speakingVideo.classList.remove('active');
                 
                 // closing 비디오 설정 및 재생
-                closingVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/closing.mp4';
+                closingVideo.src = '/media-proxy/2026_RoF_output/closing.mp4';
                 closingVideo.classList.add('active');
 
                 closingVideo.onloadeddata = () => {
