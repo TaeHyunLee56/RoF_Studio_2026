@@ -2,8 +2,9 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { Readable } from "stream";
 import * as fs from "fs";
 
-// ElevenLabs 클라이언트 초기화
+// ElevenLabs 클라이언트 초기화 (apiKey: 환경변수 ELEVENLABS_API_KEY — Railway Variables에 등록 필요)
 const client = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY,
   environment: "https://api.elevenlabs.io",
 });
 

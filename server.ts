@@ -7,6 +7,7 @@ import * as fs from "fs";
 import { createRequire } from "module";
 import "dotenv/config";
 import bcrypt from "bcrypt";
+import { loadServiceAccount } from "./serviceAccountLoader.js";
 import { findVoiceByUserId, createVoiceFromAudio, generateSpeech } from "./modules/TTS.js";
 import { getResponse, getInitiation, getEnding, clearHistory, getHistory } from "./modules/LLM/LLM.js";
 import { PromptHandler } from "./modules/LLM/promptHandler.ts";
@@ -21,7 +22,7 @@ declare module "express-session" {
 // Firebase Admin 초기화
 const require = createRequire(import.meta.url);
 const admin = require("firebase-admin");
-const serviceAccount = require("./serviceAccountKey.json");
+const serviceAccount = loadServiceAccount();
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),

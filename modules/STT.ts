@@ -1,14 +1,11 @@
 import { SpeechClient } from "@google-cloud/speech";
-import { createRequire } from "module";
 import * as fs from "fs";
 import * as path from "path";
+import { loadServiceAccount } from "../serviceAccountLoader.js";
 
 // Google Cloud Speech-to-Text 클라이언트 초기화
-const require = createRequire(import.meta.url);
-const serviceAccount = require("../serviceAccountKey.json");
-
 const speechClient = new SpeechClient({
-  credentials: serviceAccount,
+  credentials: loadServiceAccount() as Record<string, string>,
 });
 
 /**
