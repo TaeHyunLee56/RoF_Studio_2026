@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoF Studio Future Interaction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Future.html 스타일 */
+        .welcome-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .welcome-line {
+            color: white;
+            text-align: center;
+            font-size: 1.8em;
+            margin: 20px 0;
+            opacity: 0;
+            display: none;
+        }
+
+        .welcome-line.show {
+            display: block;
+            animation: fadeInUp 1s ease-out forwards;
+        }
+
+        #line2.show {
+            animation-delay: 0.5s;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .main-button {
+            background: linear-gradient(45deg, #A61A1E, #A61A1E);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: transform 0.2s ease, opacity 0.3s ease;
+            opacity: 0.7;
+            box-shadow: 0 4px 15px rgba(166, 26, 30, 0.3);
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+        }
+
+        .main-button:hover:not(:disabled) {
+            opacity: 0.5;
+            box-shadow: 0 6px 20px rgba(166, 26, 30, 0.5);
+        }
+
+        .main-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        .welcome-container.hidden,
+        .main-button.hidden {
+            display: none;
+        }
+
+        /* Video container */
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .video-container.hidden {
+            display: none;
+        }
+
+        .video-container video {
+            position: absolute;
+            transform: rotate(90deg) scale(1.65);
+            top: 0;
+            left: 0;
+            width: 80%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .video-container video.active {
+            display: block;
+        }
+
+        .video-container .screensaver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2em;
+            display: block;
+        }
+
+        .video-container .screensaver.hidden {
+            display: none;
+        }
+
+        /* Blackout 화면 */
+        .blackout-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 2000;
+            display: none;
+        }
+
+        .blackout-screen.show {
+            display: block;
+        }
+
+        /* Closing 비디오 페이드인 오버레이 */
+        .closing-fade-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 10;
+            opacity: 1;
+            pointer-events: none;
+            transition: opacity 2s ease-out;
+            display: none;
+        }
+
+        .closing-fade-overlay.active {
+            display: block;
+        }
+
+        .closing-fade-overlay.fade-out {
+            opacity: 0;
+        }
+
+        /* 보드 연결 탭 링크 (Future에서는 연결 없이 소켓으로만 i/o/x 전송) */
+        .board-links {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 3000;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .board-links a {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            font-size: 0.85em;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+        .board-links a:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* 로그아웃 버튼 */
+        .logout-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(166, 26, 30, 0.7);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: opacity 0.3s ease, background 0.3s ease;
+            z-index: 2001;
+            opacity: 0.6;
+        }
+
+        .logout-button:hover {
+            opacity: 1;
+            background: rgba(166, 26, 30, 0.9);
+        }
+
+    </style>
+</head>
+<body>
+    <!-- 보드 연결 탭 열기 (이 페이지에서는 보드 연결 없이 소켓으로만 i/o/x 전송) -->
+    <div class="board-links">
+        <a href="/board-controller-1.html" target="_blank" rel="noopener">보드 1 연결 탭</a>
+        <a href="/board-controller.html" target="_blank" rel="noopener">보드 2 연결 탭</a>
+    </div>
+
+    <!-- Future.html UI (초기 화면) -->
+    <div class="welcome-container" id="welcomeContainer">
+        <h3 id="line1" class="welcome-line">이제 미래의 나를 만날 준비가 모두 끝났습니다.</h3>
+        <h3 id="line2" class="welcome-line">스튜디오 안으로 입장해주세요.</h3>
+    </div>
+
+    <button id="mainButton" class="main-button">
+        대화하기
+    </button>
+
+    <!-- Interaction.html Video Container -->
+    <div class="video-container hidden" id="videoContainer">
+        <video id="tunnelVideo" playsinline></video>
+        <video id="listeningVideo" muted playsinline></video>
+        <video id="speakingVideo" muted playsinline></video>
+        <video id="closingVideo" playsinline></video>
+        <audio id="backgroundMusic" loop preload="none">
+            <source src="http://143.248.107.38:8186/2026_RoF_output/In%20the%20Time%20Slip%20Tunnel.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <!-- Closing 비디오 페이드인 오버레이 -->
+    <div class="closing-fade-overlay" id="closingFadeOverlay"></div>
+
+    <!-- Blackout 화면 -->
+    <div class="blackout-screen" id="blackoutScreen">
+        <button class="logout-button" id="logoutButton">로그아웃</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module">
+        // 전역 변수
+        const socket = io();
+        let isListening = false;
+        let recognition = null;
+        let currentUserId = null;
+        let currentPersonaId = null;
+        let isConversationActive = false;
+        let isWaitingForResponse = false;
+        let conversationCount = 0;
+        let userInteracted = false; // 사용자 상호작용 플래그 (autoplay 방지)
+        const BACKGROUND_MUSIC_VOLUME = 0.3;
+        const BACKGROUND_MUSIC_LOW_VOLUME = 0.15;
+
+        // DOM 요소
+        const welcomeContainer = document.getElementById('welcomeContainer');
+        const mainButton = document.getElementById('mainButton');
+        const videoContainer = document.getElementById('videoContainer');
+        const tunnelVideo = document.getElementById('tunnelVideo');
+        const listeningVideo = document.getElementById('listeningVideo');
+        const speakingVideo = document.getElementById('speakingVideo');
+        const closingVideo = document.getElementById('closingVideo');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const line1 = document.getElementById('line1');
+        const line2 = document.getElementById('line2');
+        const blackoutScreen = document.getElementById('blackoutScreen');
+        const logoutButton = document.getElementById('logoutButton');
+
+        // 대화하기 버튼 이벤트
+        mainButton.addEventListener('click', startConversation);
+
+        // 로그아웃 버튼 이벤트
+        logoutButton.addEventListener('click', handleLogout);
+
+        // Future.html의 startConversation 함수
+        async function startConversation() {
+            try {
+                // 사용자 상호작용 플래그 설정 (autoplay 방지)
+                userInteracted = true;
+
+                // 버튼 숨기기
+                mainButton.style.display = "none";
+
+                // 멘트 표시
+                line1.classList.add("show");
+                line2.classList.add("show");
+
+                // exhibPersona 자동 선택
+                const selectedPersona = "exhibPersona";
+                localStorage.setItem("selectedPersona", selectedPersona);
+
+                // API 호출
+                const [promptRes, videoRes] = await Promise.all([
+                    fetch(`/api/prompt-data?persona=${selectedPersona}`, {
+                        credentials: "include",
+                    }),
+                    fetch(`/api/video-data?persona=${selectedPersona}`, {
+                        credentials: "include",
+                    }),
+                ]);
+
+                if (promptRes.ok && videoRes.ok) {
+                    const promptData = await promptRes.json();
+                    const videoData = await videoRes.json();
+
+                    console.log("Prompt data:", promptData);
+                    console.log("Video data:", videoData);
+
+                    // Get current user ID
+                    let userId = null;
+                    try {
+                        const userRes = await fetch('/api/current-user', { credentials: 'include' });
+                        if (userRes.ok) {
+                            const userData = await userRes.json();
+                            if (userData.success) {
+                                userId = userData.userId;
+                                console.log("Current user ID:", userId);
+                            }
+                        }
+                    } catch (error) {
+                        console.warn("Could not get user ID:", error);
+                    }
+
+                    // Store data
+                    localStorage.setItem("selectedPersona", selectedPersona);
+                    localStorage.setItem("promptData", JSON.stringify(promptData));
+                    localStorage.setItem("videoData", JSON.stringify(videoData));
+
+                    // 서버에 persona-selected 이벤트 전송 (prompt.json 업데이트를 위해)
+                    socket.emit("persona-selected", {
+                        personaId: selectedPersona,
+                        userId: userId,
+                        promptData: promptData,
+                        videoData: videoData,
+                        userInteracted: true,
+                    });
+
+                    // 비디오 컨테이너 표시
+                    videoContainer.classList.remove('hidden');
+                    welcomeContainer.classList.add('hidden');
+
+                    // 페르소나 선택 이벤트 처리 (자체 처리)
+                    await handlePersonaSelected({
+                        personaId: selectedPersona,
+                        userId: userId,
+                        promptData: promptData,
+                        videoData: videoData,
+                        userInteracted: true,
+                    });
+                } else {
+                    throw new Error("Failed to prepare data");
+                }
+            } catch (error) {
+                console.error("Error starting conversation:", error);
+                alert("대화 준비 중 오류가 발생했습니다.");
+
+                // Re-enable button
+                mainButton.disabled = false;
+                mainButton.style.display = "block";
+                mainButton.textContent = "대화하기";
+            }
+        }
+
+        // 페르소나 선택 처리 함수
+        async function handlePersonaSelected(data) {
+            currentPersonaId = data.personaId;
+            if (data.userId) {
+                currentUserId = data.userId;
+                socket.emit('set-user-id', currentUserId);
+            }
+
+            // 비디오 데이터가 있으면 로드
+            if (data.videoData) {
+                console.log("[persona-selected] Received videoData:", data.videoData);
+                await loadVideosFromSocketData(data.videoData);
+            } else {
+                console.log("[persona-selected] videoData not found, loading from Firestore");
+                await loadVideosFromFirestore();
+            }
+
+            // 1. Tunnel 비디오 먼저 재생
+            await playTunnelVideo();
+
+            // 2. Tunnel 비디오 재생 완료 후 대화 시작
+            await startConversationFromEvent();
+        }
+
+        // Ping-pong 재생 관리
+        const pingPongState = {
+            listening: { direction: 1, rafId: null, active: false },
+            speaking: { direction: 1, rafId: null, active: false }
+        };
+
+        function startPingPong(video, stateKey) {
+            const state = pingPongState[stateKey];
+            // 이전 ping-pong 중지
+            stopPingPong(stateKey);
+            state.active = true;
+            state.direction = 1; // 정방향부터 시작
+
+            // ended 이벤트: 정방향 끝 → 역방향 시작
+            video._onEnded = () => {
+                if (!state.active) return;
+                state.direction = -1;
+                reversePlay(video, stateKey);
+            };
+            video.addEventListener('ended', video._onEnded);
+
+            // 정방향 재생 시작 (렌더링 후 play하여 브라우저 background media 차단 회피)
+            video.playbackRate = 1;
+            setTimeout(() => {
+                if (!state.active) return;
+                video.play().catch(e => console.warn(`[PingPong] ${stateKey} play error:`, e));
+            }, 50);
+        }
+
+        function reversePlay(video, stateKey) {
+            const state = pingPongState[stateKey];
+            if (!state.active) return;
+
+            video.pause();
+            let lastTime = performance.now();
+
+            function step(now) {
+                if (!state.active) return;
+                const delta = (now - lastTime) / 1000; // 초 단위
+                lastTime = now;
+                video.currentTime = Math.max(0, video.currentTime - delta);
+
+                if (video.currentTime <= 0.05) {
+                    // 역방향 끝 → 다시 정방향
+                    video.currentTime = 0;
+                    state.direction = 1;
+                    video.playbackRate = 1;
+                    video.play().catch(e => console.error(`[PingPong] ${stateKey} play error:`, e));
+                    return;
+                }
+
+                state.rafId = requestAnimationFrame(step);
+            }
+
+            state.rafId = requestAnimationFrame(step);
+        }
+
+        function stopPingPong(stateKey) {
+            const state = pingPongState[stateKey];
+            state.active = false;
+            if (state.rafId) {
+                cancelAnimationFrame(state.rafId);
+                state.rafId = null;
+            }
+            const video = stateKey === 'listening' ? listeningVideo : speakingVideo;
+            if (video._onEnded) {
+                video.removeEventListener('ended', video._onEnded);
+                video._onEnded = null;
+            }
+        }
+
+        // 비디오 상태 업데이트 함수
+        function showSilentVideo() {
+            if (listeningVideo && speakingVideo) {
+                listeningVideo.classList.add('active');
+                speakingVideo.classList.remove('active');
+                stopPingPong('speaking');
+                speakingVideo.pause();
+                if (listeningVideo.src && userInteracted) {
+                    startPingPong(listeningVideo, 'listening');
+                }
+            }
+        }
+
+        function showSpeakingVideo() {
+            if (listeningVideo && speakingVideo) {
+                speakingVideo.classList.add('active');
+                listeningVideo.classList.remove('active');
+                stopPingPong('listening');
+                listeningVideo.pause();
+                if (speakingVideo.src && userInteracted) {
+                    startPingPong(speakingVideo, 'speaking');
+                }
+            }
+        }
+
+        // 비디오 로드 함수
+        async function loadVideosFromSocketData(videoData) {
+            try {
+                console.log("[Video load] Loading videos:", videoData);
+
+                let listeningUrl = null;
+                let speakingUrl = null;
+
+                if (videoData && videoData.videoData) {
+                    listeningUrl = videoData.videoData.listeningUrl;
+                    speakingUrl = videoData.videoData.speakingUrl;
+                } else if (videoData) {
+                    listeningUrl = videoData.listeningUrl;
+                    speakingUrl = videoData.speakingUrl;
+                }
+
+                console.log("[비디오 로드] listeningUrl:", listeningUrl, "speakingUrl:", speakingUrl);
+
+                let videosLoaded = 0;
+                const totalVideos = (listeningUrl ? 1 : 0) + (speakingUrl ? 1 : 0);
+
+                if (totalVideos === 0) {
+                    console.warn("[Video load] Video URL not found");
+                    return;
+                }
+
+                const checkAllVideosLoaded = () => {
+                    videosLoaded++;
+                    if (videosLoaded >= totalVideos) {
+                        console.log("[Video load] All videos loaded");
+                    }
+                };
+
+                if (listeningUrl) {
+                    console.log("[Video load] Starting to load listening video:", listeningUrl);
+                    listeningVideo.src = listeningUrl;
+                    listeningVideo.muted = true;
+
+                    listeningVideo.onloadeddata = () => {
+                        console.log("[Video load] Listening video loaded");
+                        checkAllVideosLoaded();
+                    };
+
+                    listeningVideo.onerror = (e) => {
+                        console.error("[Video load] Listening video load error:", e);
+                    };
+
+                    listeningVideo.load();
+                } else {
+                    console.warn("[Video load] listeningUrl not found");
+                }
+
+                if (speakingUrl) {
+                    console.log("[Video load] Starting to load speaking video:", speakingUrl);
+                    speakingVideo.src = speakingUrl;
+                    speakingVideo.muted = true;
+
+                    speakingVideo.onloadeddata = () => {
+                        console.log("[Video load] Speaking video loaded");
+                        checkAllVideosLoaded();
+                    };
+
+                    speakingVideo.onerror = (e) => {
+                        console.error("[Video load] Speaking video load error:", e);
+                    };
+
+                    speakingVideo.load();
+                } else {
+                    console.warn("[Video load] speakingUrl not found");
+                }
+            } catch (error) {
+                console.error("[Video load] Error loading videos:", error);
+            }
+        }
+
+        async function loadVideosFromFirestore() {
+            try {
+                if (!currentUserId || !currentPersonaId) {
+                    console.warn("[Video load] userId or personaId not found, cannot load videos");
+                    return;
+                }
+
+                const response = await fetch(`/api/video-data?persona=${currentPersonaId}`, {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.videoData) {
+                        await loadVideosFromSocketData(data.videoData);
+                    } else {
+                        console.warn("[Video load] Video data not found");
+                    }
+                } else {
+                    console.error("[Video load] Failed to get video data:", response.statusText);
+                }
+            } catch (error) {
+                console.error("[Video load] Error loading videos:", error);
+            }
+        }
+
+        // Web Speech API 초기화
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ko-KR';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        const transcript = event.results[i][0].transcript.trim();
+                        if (transcript.length > 0) {
+                            recognition.stop();
+                            isListening = false;
+                            
+                            if (backgroundMusic) {
+                                backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+                            }
+                            
+                            showSilentVideo();
+                            handleSpeechInput(transcript);
+                        }
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('[음성 인식 오류]', event.error);
+                isListening = false;
+                
+                if (backgroundMusic) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+                }
+                
+                showSilentVideo();
+                
+                if (isConversationActive && conversationCount < 5) {
+                    setTimeout(() => {
+                        startListening();
+                    }, 1000);
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                
+                if (backgroundMusic) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+                }
+                
+                showSilentVideo();
+                
+                if (!isWaitingForResponse && isConversationActive && conversationCount < 5) {
+                    setTimeout(() => {
+                        if (isConversationActive && !isListening && !isWaitingForResponse) {
+                            startListening();
+                        }
+                    }, 500);
+                }
+            };
+        } else {
+            console.warn('[음성 인식] 브라우저가 음성 인식을 지원하지 않습니다.');
+        }
+
+        function startListening() {
+            if (recognition && !isListening && isConversationActive && userInteracted) {
+                recognition.start();
+                isListening = true;
+                console.log('[대화] 듣고 있습니다...');
+                
+                if (backgroundMusic) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_LOW_VOLUME;
+                }
+                
+                showSilentVideo();
+            }
+        }
+
+        // Tunnel 비디오 재생 함수 <= 바뀐 부분 체크할 것!!
+        function playTunnelVideo() {
+            return new Promise((resolve) => {
+                if (!tunnelVideo) {
+                    console.warn('[Video] tunnel video element not found');
+                    resolve();
+                    return;
+                }
+
+                // 초기 설정
+                if (listeningVideo) listeningVideo.classList.remove('active');
+                if (speakingVideo) speakingVideo.classList.remove('active');
+                
+                tunnelVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/tunnel.mp4';
+                tunnelVideo.classList.add('active');
+
+                let isResolved = false;
+
+                const handleLoaded = () => {
+                    if (isResolved) return;
+                    
+                    // 기존의 3초 대기(setTimeout)를 제거하여 즉시 재생 시도
+                    if (userInteracted) {
+                        tunnelVideo.play().then(() => {
+                            console.log('[Video] tunnel.mp4 playing started');
+                            // ★ 영상 재생이 시작됨과 동시에 'i' 신호 전송
+                            socket.emit('serial:command', 'i'); 
+                        }).catch(err => {
+                            console.error('[Video] tunnel.mp4 playback failed:', err);
+                            if (!isResolved) {
+                                isResolved = true;
+                                resolve();
+                            }
+                        });
+                    } else {
+                        resolve();
+                    }
+                };
+
+                const handleEnded = () => {
+                    console.log('[Video] tunnel.mp4 playback completed');
+                    
+                    // ★ 영상이 끝나는 순간 네오픽셀을 끄기 위해 'x' 신호 전송
+                    // 만약 대화 중에도 불이 켜져 있길 원한다면 다른 신호(예: 'o')를 보낼 수도 있습니다.
+                    socket.emit('serial:command', 'x'); 
+                    
+                    tunnelVideo.classList.remove('active');
+                    if (!isResolved) {
+                        isResolved = true;
+                        resolve();
+                    }
+                };
+
+                const handleError = (err) => {
+                    console.error('[Video] tunnel.mp4 error:', err);
+                    socket.emit('serial:command', 'x'); // 에러 발생 시 안전을 위해 끄기
+                    tunnelVideo.classList.remove('active');
+                    if (!isResolved) {
+                        isResolved = true;
+                        resolve();
+                    }
+                };
+
+                tunnelVideo.addEventListener('loadeddata', handleLoaded, { once: true });
+                tunnelVideo.addEventListener('ended', handleEnded, { once: true });
+                tunnelVideo.addEventListener('error', handleError, { once: true });
+
+                tunnelVideo.load();
+
+                // 네트워크 지연 대비 (15초 후 강제 진행)
+                setTimeout(() => {
+                    if (!isResolved) {
+                        console.warn('[Video] tunnel.mp4 load timeout');
+                        isResolved = true;
+                        resolve();
+                    }
+                }, 15000);
+            });
+        }
+
+        // Closing 비디오 재생 함수
+        const closingFadeOverlay = document.getElementById('closingFadeOverlay');
+
+        function playClosingVideo() {
+            return new Promise((resolve) => {
+                if (!closingVideo) {
+                    console.warn('[Video] closing video element not found');
+                    resolve();
+                    return;
+                }
+
+                console.log('[Video] closing.mp4 playing started');
+
+                // 시리얼 명령 브로드캐스트: 감속 (o) — 보드 1/2 연결 탭이 수신해 각자 보드에 전송
+                socket.emit('serial:command', 'o');
+
+                if (backgroundMusic) {
+                    backgroundMusic.pause();
+                    backgroundMusic.currentTime = 0;
+                    console.log('[Background Music] stopped');
+                }
+
+                listeningVideo.classList.remove('active');
+                speakingVideo.classList.remove('active');
+
+                // 검정 오버레이 표시 (페이드인 준비)
+                closingFadeOverlay.classList.add('active');
+                closingFadeOverlay.classList.remove('fade-out');
+                // opacity: 1 상태로 화면이 검정색
+
+                closingVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/closing.mp4';
+                closingVideo.classList.add('active');
+
+                closingVideo.onloadeddata = () => {
+                    console.log('[Video] closing.mp4 playback ready');
+                    if (userInteracted) {
+                        closingVideo.play().then(() => {
+                            console.log('[Video] closing.mp4 playing');
+                            // 재생 시작 후 1초에 걸쳐 검정 오버레이를 서서히 걷어냄
+                            requestAnimationFrame(() => {
+                                closingFadeOverlay.classList.add('fade-out');
+                            });
+                            // 페이드 완료 후 오버레이 제거
+                            setTimeout(() => {
+                                closingFadeOverlay.classList.remove('active', 'fade-out');
+                            }, 1100);
+                        }).catch(err => {
+                            console.error('[Video] closing.mp4 playback failed:', err);
+                            closingFadeOverlay.classList.remove('active', 'fade-out');
+                            resolve();
+                        });
+                    } else {
+                        closingFadeOverlay.classList.remove('active', 'fade-out');
+                        resolve();
+                    }
+                };
+
+                closingVideo.onended = () => {
+                    console.log('[Video] closing.mp4 playback completed');
+                    closingVideo.classList.remove('active');
+                    
+                    // 시리얼 명령 브로드캐스트: LED 끄기 (x) — 보드 1/2 연결 탭이 수신
+                    socket.emit('serial:command', 'x');
+                    
+                    resolve();
+                };
+
+                closingVideo.onerror = (err) => {
+                    console.error('[Video] closing.mp4 playback error:', err);
+                    closingVideo.classList.remove('active');
+                    resolve();
+                };
+
+                closingVideo.load();
+            });
+        }
+
+        // 대화 시작 함수
+        async function startConversationFromEvent() {
+            try {
+                if (!currentUserId) {
+                    const userResponse = await fetch('/api/current-user', { credentials: 'include' });
+                    const userData = await userResponse.json();
+
+                    if (!userData.success) {
+                        console.error('[Conversation] Login required');
+                        return;
+                    }
+
+                    currentUserId = userData.userId;
+                    socket.emit('set-user-id', currentUserId);
+                }
+
+                currentPersonaId = localStorage.getItem('selectedPersona') || 'default';
+
+                if (!listeningVideo.src || !speakingVideo.src) {
+                    await loadVideosFromFirestore();
+                }
+
+                socket.emit('user-connect', {
+                    username: currentUserId,
+                    personaId: currentPersonaId
+                });
+
+                isConversationActive = true;
+                console.log('[Conversation] Starting conversation preparation...');
+                
+                // 배경음악 재생 (사용자 상호작용 후)
+                if (backgroundMusic && userInteracted) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+                    backgroundMusic.play().then(() => {
+                        console.log('[Background Music] playing started');
+                    }).catch(err => {
+                        console.error('[Background Music] playing failed:', err);
+                    });
+                }
+                
+                showSilentVideo();
+            } catch (error) {
+                console.error('[Conversation] Error occurred:', error);
+            }
+        }
+
+        function handleSpeechInput(transcript) {
+            console.log('[User]', transcript);
+            console.log('[Conversation] Waiting for response...');
+            
+            isWaitingForResponse = true;
+
+            socket.emit('speech-input', {
+                transcript: transcript,
+                personaId: currentPersonaId || 'default',
+                conversationCount: conversationCount
+            });
+
+            conversationCount++;
+        }
+
+        // Socket.IO 이벤트 리스너 (Future Interaction은 보드 연결 없이 소켓으로만 명령 전송)
+        socket.on('initiation', (data) => {
+            console.log('[Assistant]', data.initiation);
+            console.log('[Conversation] Listening for introduction...');
+        });
+
+        socket.on('speech-response', (data) => {
+            console.log('[Assistant]', data.response);
+            if (data.isEnding) {
+                console.log('[Conversation] Conversation ended');
+                isConversationActive = false;
+            } else {
+                console.log('[Conversation] Listening for response...');
+            }
+        });
+
+        // 오디오 큐 관리
+        let audioQueue = [];
+        let isPlayingQueue = false;
+
+        function addToAudioQueue(audioBlob, isLast, isEnding) {
+            audioQueue.push({ audioBlob, isLast, isEnding });
+            
+            if (!isPlayingQueue) {
+                playNextInQueue();
+            }
+        }
+
+        function playNextInQueue() {
+            if (audioQueue.length === 0) {
+                isPlayingQueue = false;
+                showSilentVideo();
+                isWaitingForResponse = false;
+                
+                if (isConversationActive && conversationCount < 5) {
+                    setTimeout(() => {
+                        startListening();
+                    }, 500);
+                }
+                return;
+            }
+
+            isPlayingQueue = true;
+            const { audioBlob, isLast, isEnding } = audioQueue.shift();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            showSpeakingVideo();
+            
+            const newAudio = new Audio(audioUrl);
+            
+            newAudio.addEventListener('ended', () => {
+                URL.revokeObjectURL(audioUrl);
+                
+                if (isLast && isEnding) {
+                    audioQueue = [];
+                    isPlayingQueue = false;
+                    isConversationActive = false;
+                    isWaitingForResponse = false;
+                    console.log('[Conversation] Conversation ended');
+                    
+                    playClosingVideo().then(() => {
+                        console.log('[Conversation] closing.mp4 playback completed');
+                        showBlackoutScreen();
+                    });
+                    return;
+                }
+                
+                playNextInQueue();
+            });
+
+            newAudio.addEventListener('error', (err) => {
+                console.error('Audio play error:', err);
+                URL.revokeObjectURL(audioUrl);
+                showSilentVideo();
+                playNextInQueue();
+            });
+
+            if (userInteracted) {
+                newAudio.play().catch(err => {
+                    console.error('Audio play error:', err);
+                    showSilentVideo();
+                    playNextInQueue();
+                });
+            } else {
+                playNextInQueue();
+            }
+        }
+
+        socket.on('tts-response', (data) => {
+            const audioBlob = base64ToBlob(data.audio, 'audio/mpeg');
+            addToAudioQueue(audioBlob, true, false);
+        });
+
+        socket.on('tts-chunk', (data) => {
+            const audioBlob = base64ToBlob(data.audio, 'audio/mpeg');
+            addToAudioQueue(audioBlob, data.isLast, data.isEnding);
+        });
+
+        socket.on('speech-error', (data) => {
+            console.error('[Conversation] Error:', data.error);
+            if (isConversationActive && conversationCount < 5) {
+                setTimeout(() => {
+                    startListening();
+                }, 2000);
+            }
+        });
+
+        socket.on('tts-error', (data) => {
+            console.error('[TTS] Error:', data.error);
+            if (isConversationActive && conversationCount < 5) {
+                setTimeout(() => {
+                    startListening();
+                }, 2000);
+            }
+        });
+
+        socket.on('user-connect-error', (data) => {
+            console.error('[Connection] Error:', data.message);
+            isConversationActive = false;
+        });
+
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        // Blackout 화면 표시 함수
+        function showBlackoutScreen() {
+            console.log('[Blackout] Showing screen');
+
+            // Ping-pong 중지
+            stopPingPong('listening');
+            stopPingPong('speaking');
+
+            // 시리얼 명령 브로드캐스트: LED 끄기 (x) 리셋 — 보드 1/2 연결 탭이 수신
+            socket.emit('serial:command', 'x');
+
+            // 모든 비디오 숨기기
+            videoContainer.classList.add('hidden');
+            tunnelVideo.classList.remove('active');
+            listeningVideo.classList.remove('active');
+            speakingVideo.classList.remove('active');
+            closingVideo.classList.remove('active');
+            
+            // Blackout 화면 표시
+            blackoutScreen.classList.add('show');
+        }
+
+        // 로그아웃 처리 함수
+        async function handleLogout() {
+            try {
+                // 로그아웃 API 호출
+                const response = await fetch('/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                if (response.ok || response.redirected) {
+                    // 로그인 페이지로 이동
+                    window.location.href = '/login';
+                } else {
+                    // API 호출 실패 시에도 로그인 페이지로 이동
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('[Logout] Error:', error);
+                // 오류 발생 시에도 로그인 페이지로 이동
+                window.location.href = '/login';
+            }
+        }
+
+        // 페이지 로드 시
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPersona = localStorage.getItem('selectedPersona');
+            if (savedPersona) {
+                currentPersonaId = savedPersona;
+            }
+        });
+    </script>
+</body>
+</html>
+

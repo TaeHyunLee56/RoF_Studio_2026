@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대화</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            margin-top: 20px;
+            font-size: 2.5em;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container.hidden {
+            display: none;
+        }
+
+        .conversation-area {
+            flex: 1;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .message.user {
+            background: rgba(166, 26, 30, 0.3);
+            text-align: right;
+            color: white;
+            margin-left: 20%;
+        }
+
+        .message.assistant {
+            background: rgba(255, 255, 255, 0.1);
+            text-align: left;
+            color: white;
+            margin-right: 20%;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 40px;
+            background: linear-gradient(45deg, #A61A1E, #A61A1E);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0.7;
+            box-shadow: 0 4px 15px rgba(166, 26, 30, 0.3);
+        }
+
+        button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(166, 26, 30, 0.5);
+            opacity: 1;
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* 스크롤바 스타일 */
+        .conversation-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .conversation-area::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .conversation-area::-webkit-scrollbar-thumb {
+            background: rgba(166, 26, 30, 0.5);
+            border-radius: 10px;
+        }
+
+        .conversation-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(166, 26, 30, 0.7);
+        }
+
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .video-container video {
+            position: absolute;
+            transform: rotate(90deg) scale(1.65);
+            top: 0;
+            left: 0;
+            width: 80%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .video-container video.active {
+            display: block;
+        }
+
+        .video-container .screensaver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2em;
+            display: block;
+        }
+
+        .video-container .screensaver.hidden {
+            display: none;
+        }
+
+        /* 시리얼 연결 버튼 스타일 */
+        .serial-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .serial-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .serial-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: scale(1.05);
+        }
+
+        .serial-btn.connected {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: rgba(34, 197, 94, 0.6);
+        }
+
+        .serial-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .serial-status {
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.85em;
+            backdrop-filter: blur(10px);
+        }
+
+        .serial-status.connected {
+            color: #22c55e;
+        }
+
+        .serial-status.disconnected {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <!-- 시리얼 연결 컨트롤 -->
+    <div class="serial-controls">
+        <div class="serial-status disconnected" id="serialStatus">연결 안됨</div>
+        <button class="serial-btn" id="connectBtn">ESP32 연결</button>
+        <button class="serial-btn" id="disconnectBtn" disabled>연결 해제</button>
+    </div>
+
+    <div class="video-container">
+        <video id="tunnelVideo" playsinline></video>
+        <video id="listeningVideo" loop muted playsinline></video>
+        <video id="speakingVideo" loop muted playsinline></video>
+        <video id="closingVideo" playsinline></video>
+        <audio id="backgroundMusic" loop preload="auto">
+            <source src="http://143.248.107.38:8186/2026_RoF_output/In%20the%20Time%20Slip%20Tunnel.mp3" type="audio/mpeg">
+        </audio>
+        <!-- <div class="screensaver" id="screensaver">비디오를 불러오는 중...</div> -->
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/SerialController.js"></script>
+    <script type="module">
+        // 전역 변수
+        const socket = io();
+        let conversationCount = 0;
+        let isListening = false;
+        let recognition = null;
+        let currentUserId = null;
+        let currentPersonaId = null;
+        let isConversationActive = false;
+        let isWaitingForResponse = false; // 응답 대기 중 플래그
+        const BACKGROUND_MUSIC_VOLUME = 0.3; // 기본 볼륨
+        const BACKGROUND_MUSIC_LOW_VOLUME = 0.15; // 음성 인식 대기 중 볼륨 (50% 낮춤)
+        
+        // SerialController 인스턴스 생성
+        const serialController = new SerialController();
+
+        const tunnelVideo = document.getElementById('tunnelVideo');
+        const listeningVideo = document.getElementById('listeningVideo');
+        const speakingVideo = document.getElementById('speakingVideo');
+        const closingVideo = document.getElementById('closingVideo');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const screensaver = document.getElementById('screensaver');
+
+        // 시리얼 UI 요소
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const serialStatus = document.getElementById('serialStatus');
+
+        // 시리얼 연결 버튼 이벤트
+        connectBtn.addEventListener('click', async () => {
+            const success = await serialController.connect();
+            if (success) {
+                serialStatus.textContent = '연결됨';
+                serialStatus.classList.remove('disconnected');
+                serialStatus.classList.add('connected');
+                connectBtn.classList.add('connected');
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                alert('ESP32 연결에 실패했습니다. 다시 시도해주세요.');
+            }
+        });
+
+        // 시리얼 연결 해제 버튼 이벤트
+        disconnectBtn.addEventListener('click', async () => {
+            await serialController.disconnect();
+            serialStatus.textContent = '연결 안됨';
+            serialStatus.classList.remove('connected');
+            serialStatus.classList.add('disconnected');
+            connectBtn.classList.remove('connected');
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+        });
+
+        // 비디오 상태 업데이트 함수
+        function showSilentVideo() {
+            if (listeningVideo && speakingVideo) {
+                listeningVideo.classList.add('active');
+                speakingVideo.classList.remove('active');
+                // listening 비디오 재생
+                if (listeningVideo.src) {
+                    listeningVideo.play().catch(e => console.error('Listening video play error:', e));
+                }
+                // speaking 비디오 일시정지
+                speakingVideo.pause();
+            }
+        }
+
+        function showSpeakingVideo() {
+            if (listeningVideo && speakingVideo) {
+                speakingVideo.classList.add('active');
+                listeningVideo.classList.remove('active');
+                // speaking 비디오 재생
+                if (speakingVideo.src) {
+                    speakingVideo.play().catch(e => console.error('Speaking video play error:', e));
+                }
+                // listening 비디오 일시정지
+                listeningVideo.pause();
+            }
+        }
+
+        // ===== Controller 클라이언트에서 선택한 페르소나 영상 로딩 =====
+        async function loadVideosFromSocketData(videoData) {
+            try {
+                console.log("[비디오 로드] 비디오 불러오는 중...", videoData);
+
+                let listeningUrl = null;
+                let speakingUrl = null;
+
+                if (videoData && videoData.videoData) {
+                    listeningUrl = videoData.videoData.listeningUrl;
+                    speakingUrl = videoData.videoData.speakingUrl;
+                } else if (videoData) {
+                    listeningUrl = videoData.listeningUrl;
+                    speakingUrl = videoData.speakingUrl;
+                }
+
+                console.log("[비디오 로드] listeningUrl:", listeningUrl, "speakingUrl:", speakingUrl);
+
+                let videosLoaded = 0;
+                const totalVideos = (listeningUrl ? 1 : 0) + (speakingUrl ? 1 : 0);
+
+                if (totalVideos === 0) {
+                    console.warn("[비디오 로드] 비디오 URL이 없습니다.");
+                    return;
+                }
+
+                const checkAllVideosLoaded = () => {
+                    videosLoaded++;
+                    if (videosLoaded >= totalVideos) {
+                        console.log("[비디오 로드] 모든 비디오 로드 완료");
+                    }
+                };
+
+                if (listeningUrl) {
+                    console.log("[비디오 로드] Listening 비디오 로드 시작:", listeningUrl);
+                    listeningVideo.src = listeningUrl;
+                    listeningVideo.loop = true;
+                    listeningVideo.muted = true;
+
+                    listeningVideo.onloadeddata = () => {
+                        console.log("[비디오 로드] Listening 비디오 로드 완료");
+                        checkAllVideosLoaded();
+                    };
+
+                    listeningVideo.onerror = (e) => {
+                        console.error("[비디오 로드] Listening 비디오 로드 오류:", e);
+                    };
+
+                    listeningVideo.load();
+                } else {
+                    console.warn("[비디오 로드] listeningUrl이 없습니다");
+                }
+
+                if (speakingUrl) {
+                    console.log("[비디오 로드] Speaking 비디오 로드 시작:", speakingUrl);
+                    speakingVideo.src = speakingUrl;
+                    speakingVideo.loop = true;
+                    speakingVideo.muted = true;
+
+                    speakingVideo.onloadeddata = () => {
+                        console.log("[비디오 로드] Speaking 비디오 로드 완료");
+                        checkAllVideosLoaded();
+                    };
+
+                    speakingVideo.onerror = (e) => {
+                        console.error("[비디오 로드] Speaking 비디오 로드 오류:", e);
+                    };
+
+                    speakingVideo.load();
+                } else {
+                    console.warn("[비디오 로드] speakingUrl이 없습니다");
+                }
+            } catch (error) {
+                console.error("[비디오 로드] 비디오 로드 중 오류:", error);
+            }
+        }
+
+        // Firestore에서 비디오 로드
+        async function loadVideosFromFirestore() {
+            try {
+                if (!currentUserId || !currentPersonaId) {
+                    console.warn("[비디오 로드] userId 또는 personaId가 없어 비디오를 로드할 수 없습니다");
+                    return;
+                }
+
+                const response = await fetch(`/api/video-data?persona=${currentPersonaId}`, {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.videoData) {
+                        await loadVideosFromSocketData(data.videoData);
+                    } else {
+                        console.warn("[비디오 로드] 비디오 데이터가 없습니다");
+                    }
+                } else {
+                    console.error("[비디오 로드] 비디오 데이터 가져오기 실패:", response.statusText);
+                }
+            } catch (error) {
+                console.error("[비디오 로드] 비디오 로드 중 오류:", error);
+            }
+        }
+
+        // 초기 상태: screensaver 숨김
+        if (screensaver) {
+            screensaver.classList.add('hidden');
+        }
+
+        // Web Speech API 초기화
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ko-KR';
+            recognition.continuous = true; // 연속 인식 모드로 변경
+            recognition.interimResults = true; // 중간 결과도 받아서 사용자가 말하는지 확인
+
+            recognition.onresult = (event) => {
+                // 최종 결과만 처리 (isFinal이 true인 경우)
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        const transcript = event.results[i][0].transcript.trim();
+                        if (transcript.length > 0) {
+                            // 음성 인식 중지
+                            recognition.stop();
+                            isListening = false;
+                            
+                            // 배경음악 볼륨 원래대로 복원
+                            if (backgroundMusic) {
+                                backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+                            }
+                            
+                            showSilentVideo(); // 음성 인식 완료 후 silent 유지
+                            handleSpeechInput(transcript);
+                        }
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('[음성 인식 오류]', event.error);
+                isListening = false;
+                
+                // 배경음악 볼륨 원래대로 복원
+                if (backgroundMusic) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+                }
+                
+                showSilentVideo(); // 오류 발생 시 silent 유지
+                
+                // 오류 후에도 대화 계속 진행
+                if (isConversationActive && conversationCount < 5) {
+                    setTimeout(() => {
+                        startListening();
+                    }, 1000);
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                
+                // 배경음악 볼륨 원래대로 복원
+                if (backgroundMusic) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+                }
+                
+                showSilentVideo(); // 음성 인식 종료 시 silent 유지
+                
+                // 응답을 기다리는 중이면 자동 재시작하지 않음
+                // (응답이 완전히 끝난 후 playNextInQueue에서 재시작)
+                if (!isWaitingForResponse && isConversationActive && conversationCount < 5) {
+                    // 짧은 딜레이 후 다시 시작 (무한 루프 방지)
+                    setTimeout(() => {
+                        if (isConversationActive && !isListening && !isWaitingForResponse) {
+                            startListening();
+                        }
+                    }, 500);
+                }
+            };
+        } else {
+            console.warn('[Speech recognition] Browser does not support speech recognition.');
+        }
+
+        // 음성 인식 시작
+        function startListening() {
+            if (recognition && !isListening && isConversationActive) {
+                recognition.start();
+                isListening = true;
+                console.log('[Conversation] Listening...');
+                
+                // 배경음악 볼륨 낮추기 (50% 낮춤)
+                if (backgroundMusic) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_LOW_VOLUME;
+                }
+                
+                showSilentVideo(); // 사용자가 말할 때 silent 표시
+            }
+        }
+
+        // Tunnel 비디오 재생 함수
+        function playTunnelVideo() {
+            return new Promise((resolve) => {
+                if (!tunnelVideo) {
+                    console.warn('[Video] tunnel video element not found');
+                    resolve();
+                    return;
+                }
+
+                console.log('[Video] tunnel.mp4 playing started');
+                
+                // ===== 시리얼 명령: 가속 (i) =====
+                if (serialController.getConnectionStatus()) {
+                    serialController.accelerate().then(success => {
+                        if (success) {
+                            console.log('[Pico] i sent successfully');
+                        } else {
+                            console.warn('[Pico] i sent failed');
+                        }
+                    });
+                }
+                
+                // listening, speaking 비디오 숨기기
+                if (listeningVideo) listeningVideo.classList.remove('active');
+                if (speakingVideo) speakingVideo.classList.remove('active');
+                
+                // tunnel 비디오 설정 및 재생
+                tunnelVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/tunnel.mp4';
+                tunnelVideo.classList.add('active');
+
+                // 이미 로드된 경우를 대비한 플래그
+                let isResolved = false;
+
+                const handleLoaded = () => {
+                    if (isResolved) return;
+                    console.log('[비디오] tunnel.mp4 재생 준비 완료');
+                    // 3초 대기 후 재생 시작
+                    setTimeout(() => {
+                        tunnelVideo.play().then(() => {
+                            console.log('[비디오] tunnel.mp4 재생 중');
+                        }).catch(err => {
+                            console.error('[비디오] tunnel.mp4 재생 실패:', err);
+                            if (!isResolved) {
+                                isResolved = true;
+                                resolve(); // 재생 실패해도 계속 진행
+                            }
+                        });
+                    }, 3000);
+                };
+
+                const handleEnded = () => {
+                    console.log('[Video] tunnel.mp4 playback completed');
+                    tunnelVideo.classList.remove('active');
+                    
+                    // ===== 시리얼 명령: LED 끄기 (x) — 대화 시작 전 LED off =====
+                    if (serialController.getConnectionStatus()) {
+                        serialController.turnOff().then(success => {
+                            if (success) {
+                                console.log('[Pico] x sent successfully (tunnel end)');
+                            } else {
+                                console.warn('[Pico] x sent failed (tunnel end)');
+                            }
+                        });
+                    }
+                    
+                    if (!isResolved) {
+                        isResolved = true;
+                        resolve();
+                    }
+                };
+
+                const handleError = (err) => {
+                    console.error('[비디오] tunnel.mp4 재생 오류:', err);
+                    tunnelVideo.classList.remove('active');
+                    if (!isResolved) {
+                        isResolved = true;
+                        resolve(); // 오류 발생해도 계속 진행
+                    }
+                };
+
+                // 이벤트 리스너 등록
+                tunnelVideo.addEventListener('loadeddata', handleLoaded, { once: true });
+                tunnelVideo.addEventListener('ended', handleEnded, { once: true });
+                tunnelVideo.addEventListener('error', handleError, { once: true });
+
+                // 비디오 로드 시작
+                tunnelVideo.load();
+
+                // 타임아웃 설정 (30초 후에도 로드되지 않으면 진행)
+                setTimeout(() => {
+                    if (!isResolved) {
+                        console.warn('[비디오] tunnel.mp4 로드 타임아웃, 계속 진행');
+                        isResolved = true;
+                        resolve();
+                    }
+                }, 30000);
+            });
+        }
+
+        // Closing 비디오 재생 함수
+        function playClosingVideo() {
+            return new Promise((resolve) => {
+                if (!closingVideo) {
+                    console.warn('[비디오] closing 비디오 요소를 찾을 수 없습니다.');
+                    resolve();
+                    return;
+                }
+
+                console.log('[비디오] closing.mp4 재생 시작');
+                
+                // ===== 시리얼 명령: 감속 (o) =====
+                if (serialController.getConnectionStatus()) {
+                    serialController.decelerate().then(success => {
+                        if (success) {
+                            console.log('[ESP32] 감속 명령(o) 전송 성공');
+                        } else {
+                            console.warn('[ESP32] 감속 명령(o) 전송 실패');
+                        }
+                    });
+                }
+                
+                // 배경음악 정지
+                if (backgroundMusic) {
+                    backgroundMusic.pause();
+                    backgroundMusic.currentTime = 0; // 처음으로 되돌림
+                    console.log('[배경음악] 재생 정지');
+                }
+                
+                // listening, speaking 비디오 숨기기
+                listeningVideo.classList.remove('active');
+                speakingVideo.classList.remove('active');
+                
+                // closing 비디오 설정 및 재생
+                closingVideo.src = 'http://143.248.107.38:8186/2026_RoF_output/closing.mp4';
+                closingVideo.classList.add('active');
+
+                closingVideo.onloadeddata = () => {
+                    console.log('[비디오] closing.mp4 재생 준비 완료');
+                    // 3초 대기 후 재생 시작
+                    setTimeout(() => {
+                        closingVideo.play().then(() => {
+                            console.log('[비디오] closing.mp4 재생 중');
+                        }).catch(err => {
+                            console.error('[비디오] closing.mp4 재생 실패:', err);
+                            resolve(); // 재생 실패해도 계속 진행
+                        });
+                    }, 3000);
+                };
+
+                closingVideo.onended = () => {
+                    console.log('[비디오] closing.mp4 재생 완료');
+                    closingVideo.classList.remove('active');
+                    
+                    // ===== 시리얼 명령: LED 끄기 (x) =====
+                    if (serialController.getConnectionStatus()) {
+                        serialController.turnOff().then(success => {
+                            if (success) {
+                                console.log('[ESP32] LED 끄기 명령(x) 전송 성공');
+                            } else {
+                                console.warn('[ESP32] LED 끄기 명령(x) 전송 실패');
+                            }
+                        });
+                    }
+                    
+                    resolve();
+                };
+
+                closingVideo.onerror = (err) => {
+                    console.error('[비디오] closing.mp4 재생 오류:', err);
+                    closingVideo.classList.remove('active');
+                    resolve(); // 오류 발생해도 계속 진행
+                };
+
+                closingVideo.load();
+            });
+        }
+
+        // 초기 상태로 리셋하는 함수
+        function resetToInitialState() {
+            console.log('[리셋] 초기 상태로 복귀 중...');
+            
+            // ===== 시리얼 명령: LED 끄기 (x) =====
+            if (serialController.getConnectionStatus()) {
+                serialController.turnOff().then(success => {
+                    if (success) {
+                        console.log('[ESP32] LED 끄기 명령(x) 전송 성공');
+                    } else {
+                        console.warn('[ESP32] LED 끄기 명령(x) 전송 실패');
+                    }
+                });
+            }
+            
+            // 대화 상태 리셋
+            conversationCount = 0;
+            isListening = false;
+            isConversationActive = false;
+            audioQueue = [];
+            isPlayingQueue = false;
+            
+            // 음성 인식 중지
+            if (recognition && isListening) {
+                recognition.stop();
+            }
+            
+            // 모든 비디오 숨기기 및 일시정지
+            tunnelVideo.classList.remove('active');
+            listeningVideo.classList.remove('active');
+            speakingVideo.classList.remove('active');
+            closingVideo.classList.remove('active');
+            
+            tunnelVideo.pause();
+            listeningVideo.pause();
+            speakingVideo.pause();
+            closingVideo.pause();
+            
+            // 배경음악 정지
+            if (backgroundMusic) {
+                backgroundMusic.pause();
+                backgroundMusic.currentTime = 0;
+            }
+            
+            // screensaver 표시
+            if (screensaver) {
+                screensaver.classList.remove('hidden');
+                screensaver.textContent = '비디오를 불러오는 중...';
+            }
+            
+            console.log('[리셋] 초기 상태로 복귀 완료');
+        }
+
+        // 대화 시작 함수 (future.html의 "대화하기" 버튼으로 트리거됨)
+        async function startConversationFromEvent() {
+            try {
+                // 현재 사용자 정보 가져오기
+                const userResponse = await fetch('/api/current-user', { credentials: 'include' });
+                const userData = await userResponse.json();
+
+                if (!userData.success) {
+                    console.error('[대화] 로그인이 필요합니다.');
+                    return;
+                }
+
+                currentUserId = userData.userId;
+                socket.emit('set-user-id', currentUserId);
+
+                // localStorage에서 페르소나 정보 가져오기
+                currentPersonaId = localStorage.getItem('selectedPersona') || 'default';
+
+                // 비디오가 아직 로드되지 않았으면 로드
+                if (!listeningVideo.src || !speakingVideo.src) {
+                    await loadVideosFromFirestore();
+                }
+
+                // 사용자 연결
+                socket.emit('user-connect', {
+                    username: currentUserId,
+                    personaId: currentPersonaId
+                });
+
+                isConversationActive = true;
+                console.log('[대화] 대화를 준비하는 중...');
+                
+                // 배경음악 재생 시작 (잔잔하게)
+                if (backgroundMusic) {
+                    backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME; // 볼륨을 30%로 설정하여 잔잔하게
+                    backgroundMusic.play().then(() => {
+                        console.log('[배경음악] 재생 시작');
+                    }).catch(err => {
+                        console.error('[배경음악] 재생 실패:', err);
+                    });
+                }
+                
+                // listening 비디오 표시 및 재생
+                showSilentVideo();
+            } catch (error) {
+                console.error('[대화] 오류가 발생했습니다:', error);
+            }
+        }
+
+        // 음성 입력 처리
+        function handleSpeechInput(transcript) {
+            console.log('[사용자]', transcript);
+            console.log('[대화] 응답을 기다리는 중...');
+            
+            // 응답 대기 중 플래그 설정
+            isWaitingForResponse = true;
+
+            socket.emit('speech-input', {
+                transcript: transcript,
+                personaId: currentPersonaId || 'default',
+                conversationCount: conversationCount
+            });
+
+            conversationCount++;
+        }
+
+        // Socket.IO 이벤트 리스너
+        socket.on('initiation', (data) => {
+            console.log('[어시스턴트]', data.initiation);
+            console.log('[대화] 인사를 듣고 있습니다...');
+            // TTS는 서버에서 자동으로 전송됨
+        });
+
+        socket.on('speech-response', (data) => {
+            console.log('[어시스턴트]', data.response);
+            if (data.isEnding) {
+                console.log('[대화] 대화가 종료되었습니다.');
+                isConversationActive = false;
+            } else {
+                console.log('[대화] 응답을 듣고 있습니다...');
+            }
+            
+            // TTS는 서버에서 자동으로 전송됨
+        });
+
+        // 오디오 큐 관리
+        let audioQueue = [];
+        let isPlayingQueue = false;
+
+        // 큐에 오디오 추가 및 재생
+        function addToAudioQueue(audioBlob, isLast, isEnding) {
+            audioQueue.push({ audioBlob, isLast, isEnding });
+            
+            if (!isPlayingQueue) {
+                playNextInQueue();
+            }
+        }
+
+        // 큐에서 다음 오디오 재생
+        function playNextInQueue() {
+            if (audioQueue.length === 0) {
+                isPlayingQueue = false;
+                showSilentVideo(); // 모든 오디오 재생 완료 시 silent 표시
+                
+                // 응답 대기 플래그 해제 (응답 재생 완료)
+                isWaitingForResponse = false;
+                
+                // 모든 오디오 재생 완료 시 STT 시작
+                if (isConversationActive && conversationCount < 5) {
+                    setTimeout(() => {
+                        startListening();
+                    }, 500);
+                }
+                return;
+            }
+
+            isPlayingQueue = true;
+            const { audioBlob, isLast, isEnding } = audioQueue.shift();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            // TTS 재생 시작 시 speaking 표시
+            showSpeakingVideo();
+            
+            // 새로운 오디오 요소 생성 (동시 재생 방지)
+            const newAudio = new Audio(audioUrl);
+            
+            newAudio.addEventListener('ended', () => {
+                URL.revokeObjectURL(audioUrl);
+                
+                // 마지막 문장이고 종료인 경우
+                if (isLast && isEnding) {
+                    audioQueue = [];
+                    isPlayingQueue = false;
+                    isConversationActive = false;
+                    isWaitingForResponse = false; // 종료 시 플래그 해제
+                    console.log('[대화] 대화가 종료되었습니다.');
+                    
+                    // Closing 비디오 재생
+                    playClosingVideo().then(() => {
+                        console.log('[대화] closing 비디오 재생 완료');
+                        // future.html에 대화 종료 알림
+                        socket.emit('conversation-ended');
+                        // interaction.html은 새로고침
+                        window.location.reload();
+                    });
+                    return;
+                }
+                
+                // 다음 오디오 재생
+                playNextInQueue();
+            });
+
+            newAudio.addEventListener('error', (err) => {
+                console.error('Audio play error:', err);
+                URL.revokeObjectURL(audioUrl);
+                showSilentVideo(); // 오류 발생 시 silent 표시
+                // 오류 발생해도 다음 오디오 재생 시도
+                playNextInQueue();
+            });
+
+            // 오디오 재생 시작
+            newAudio.play().catch(err => {
+                console.error('Audio play error:', err);
+                showSilentVideo(); // 재생 실패 시 silent 표시
+                playNextInQueue();
+            });
+        }
+
+        // 기존 tts-response 이벤트 (하위 호환성)
+        socket.on('tts-response', (data) => {
+            const audioBlob = base64ToBlob(data.audio, 'audio/mpeg');
+            addToAudioQueue(audioBlob, true, false);
+        });
+
+        // 새로운 tts-chunk 이벤트 (문장 단위)
+        socket.on('tts-chunk', (data) => {
+            const audioBlob = base64ToBlob(data.audio, 'audio/mpeg');
+            addToAudioQueue(audioBlob, data.isLast, data.isEnding);
+        });
+
+        socket.on('speech-error', (data) => {
+            console.error('[대화 오류]', data.error);
+            if (isConversationActive && conversationCount < 5) {
+                setTimeout(() => {
+                    startListening();
+                }, 2000);
+            }
+        });
+
+        socket.on('tts-error', (data) => {
+            console.error('[TTS 오류]', data.error);
+            // TTS 오류 후에도 대화 계속 진행
+            if (isConversationActive && conversationCount < 5) {
+                setTimeout(() => {
+                    startListening();
+                }, 2000);
+            }
+        });
+
+        socket.on('user-connect-error', (data) => {
+            console.error('[연결 오류]', data.message);
+            isConversationActive = false;
+        });
+
+        // Base64를 Blob으로 변환
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        // 페르소나 선택 이벤트 수신 (future.html의 "대화하기" 버튼 클릭 시)
+        socket.on('persona-selected', async (data) => {
+            currentPersonaId = data.personaId;
+            if (data.userId) {
+                currentUserId = data.userId;
+                socket.emit('set-user-id', currentUserId);
+            }
+            
+            // 비디오 데이터가 있으면 로드
+            if (data.videoData) {
+                console.log("[persona-selected] videoData 수신:", data.videoData);
+                await loadVideosFromSocketData(data.videoData);
+            } else {
+                console.log("[persona-selected] videoData가 없어 Firestore에서 로드");
+                // 비디오 데이터가 없으면 Firestore에서 로드
+                await loadVideosFromFirestore();
+            }
+            
+            // 1. Tunnel 비디오 먼저 재생 (listening, speaking 비디오는 숨김)
+            await playTunnelVideo();
+            
+            // 2. Tunnel 비디오 재생 완료 후 대화 시작
+            await startConversationFromEvent();
+        });
+
+        // 페이지 로드 시 페르소나 정보 확인
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPersona = localStorage.getItem('selectedPersona');
+            if (savedPersona) {
+                currentPersonaId = savedPersona;
+            }
+        });
+    </script>
+</body>
+</html>

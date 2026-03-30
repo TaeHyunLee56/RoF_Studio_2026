@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <!-- ./routes/auth.js: 아두이노, PersonaID 로직 추가 -->
+    <meta charset="UTF-8" />
+    <title>RoF Studio Future</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(160deg, #2c2c2c 0%, #2f1e1e 50%, #331a1a 60%, #231717 100%);
+        margin: 0;
+        padding: 40px 20px 20px 20px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+      }
+
+      .main-button {
+        background: linear-gradient(45deg, #A61A1E, #A61A1E);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-size: 1.2em;
+        transition: transform 0.2s ease, opacity 0.3s ease;
+        opacity: 0.7;
+        box-shadow: 0 4px 15px rgba(166, 26, 30, 0.3);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .main-button:hover:not(:disabled) {
+        opacity: 0.5;
+        box-shadow: 0 6px 20px rgba(166, 26, 30, 0.5);
+      }
+
+      .main-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+
+      .welcome-line {
+        color: white;
+        text-align: center;
+        font-size: 1.8em;
+        margin: 20px 0;
+        opacity: 0;
+        display: none;
+      }
+
+      .welcome-line.show {
+        display: block;
+        animation: fadeInUp 1s ease-out forwards;
+      }
+
+      .welcome-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      #line2.show {
+        animation-delay: 0.5s;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+    <!-- Socket.IO script -->
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+
+  <body>
+    <div class="welcome-container">
+      <h3 id="line1" class="welcome-line">이제 미래의 나를 만날 준비가 모두 끝났습니다.</h3>
+      <h3 id="line2" class="welcome-line">스튜디오 안으로 입장해주세요.</h3>
+    </div>
+
+
+    <button
+      id="mainButton"
+      class="main-button"
+      onclick="startConversation()"
+    >
+      대화하기
+    </button>
+
+    <script>
+      // Initialize Socket.IO connection
+      const socket = io();
+
+      async function startConversation() {
+        try {
+          // 버튼 숨기기
+          const mainButton = document.getElementById("mainButton");
+          mainButton.style.display = "none";
+
+          // 멘트 표시
+          const line1 = document.getElementById("line1");
+          const line2 = document.getElementById("line2");
+          line1.classList.add("show");
+          line2.classList.add("show");
+
+          // exhibPersona 자동 선택
+          const selectedPersona = "exhibPersona";
+          
+          // Store the selected persona for later use
+          localStorage.setItem("selectedPersona", selectedPersona);
+
+          // Call both endpoints
+          const [promptRes, videoRes] = await Promise.all([
+            fetch(`/api/prompt-data?persona=${selectedPersona}`, {
+              credentials: "include",
+            }),
+            fetch(`/api/video-data?persona=${selectedPersona}`, {
+              credentials: "include",
+            }),
+          ]);
+
+          if (promptRes.ok && videoRes.ok) {
+            const promptData = await promptRes.json();
+            const videoData = await videoRes.json();
+
+            console.log("Prompt data:", promptData);
+            console.log("Video data:", videoData);
+
+            // Get current user ID for voice cloning
+            let userId = null;
+            try {
+              const userRes = await fetch('/api/current-user', { credentials: 'include' });
+              if (userRes.ok) {
+                const userData = await userRes.json();
+                if (userData.success) {
+                  userId = userData.userId;
+                  console.log("Current user ID:", userId);
+                }
+              }
+            } catch (error) {
+              console.warn("Could not get user ID:", error);
+            }
+
+            // Store the data for interaction.html
+            localStorage.setItem("selectedPersona", selectedPersona);
+            localStorage.setItem("promptData", JSON.stringify(promptData));
+            localStorage.setItem("videoData", JSON.stringify(videoData));
+
+            // Emit the data to interaction pages via Socket.IO including userId for voice cloning
+            // 사용자 상호작용이 발생했음을 표시
+            socket.emit("persona-selected", {
+              personaId: selectedPersona,
+              userId: userId, // Include userId for voice cloning
+              promptData: promptData,
+              videoData: videoData,
+              userInteracted: true, // 사용자 상호작용 플래그
+            });
+
+            // 데이터 전달 완료 - 화면 전환 없음
+            console.log("데이터 전달 완료");
+            mainButton.textContent = "준비 완료";
+            mainButton.disabled = true;
+          } else {
+            throw new Error("Failed to prepare data");
+          }
+        } catch (error) {
+          console.error("Error starting conversation:", error);
+          alert("대화 준비 중 오류가 발생했습니다.");
+
+          // Re-enable button
+          const mainButton = document.getElementById("mainButton");
+          mainButton.disabled = false;
+          mainButton.textContent = "대화하기";
+        }
+      }
+
+      // 대화 종료 이벤트 수신 (interaction.html에서 emit)
+      socket.on('conversation-ended', () => {
+        console.log('[대화 종료] future.html에서 login으로 리다이렉트');
+        window.location.href = '/login';
+      });
+    </script>
+  </body>

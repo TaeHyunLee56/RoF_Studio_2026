@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoF Studio</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #202020;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 60px;
+            margin-top: 60px;
+            font-size: 2.5em;
+        }
+
+        h2 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        #login {
+            padding: 40px;
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .login-logo {
+            display: block;
+            margin: 0 auto 12px;
+            width: 120px;
+            height: auto;
+        }
+
+        #login h2 {
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        #login form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #login form button {
+            margin-top: 8px;
+        }
+
+        #login input {
+            padding: 15px;
+            border: 1px solid rgba(150, 150, 150, 0.3);
+            border-radius: 10px;
+            font-size: 1em;
+            background: rgba(131, 131, 131, 0.9);
+            color: #f0f0f0;
+            opacity: 0.5;
+            transition: border-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        #login input:focus {
+            outline: none;
+            border-color: #A61A1E;
+            box-shadow: 0 0 10px rgba(166, 26, 30, 0.3);
+        }
+
+        #login input::placeholder {
+            color: #ffffff;
+        }
+
+        #login button {
+            background: linear-gradient(45deg, #A61A1E, #A61A1E);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 15px rgba(166, 26, 30, 0.4);
+        }
+
+        #login button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(166, 26, 30, 0.6);
+        }
+
+        #login p {
+            margin: 0;
+            color: white;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        /* 시리얼 연결 버튼 스타일 */
+        .serial-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .serial-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .serial-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: scale(1.05);
+        }
+
+        .serial-btn.connected {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: rgba(34, 197, 94, 0.6);
+        }
+
+        .serial-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .serial-status {
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.85em;
+            backdrop-filter: blur(10px);
+        }
+
+        .serial-status.connected {
+            color: #22c55e;
+        }
+
+        .serial-status.disconnected {
+            color: #ef4444;
+        }
+
+        .serial-controls.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 시리얼 연결 컨트롤 -->
+    <div class="serial-controls">
+        <div class="serial-status disconnected" id="serialStatus">연결 안됨</div>
+        <button class="serial-btn" id="connectBtn">ESP32 연결</button>
+        <button class="serial-btn" id="serialTestBtn">시리얼 통신 테스트</button>
+        <button class="serial-btn" id="disconnectBtn" disabled>연결 해제</button>
+    </div>
+
+    <div id="login">
+        <img src="/assets/rof-studio-logo.png" class="login-logo" alt="RoF Studio Logo">
+        <h2>RoF Studio</h2>
+        
+        <form id="loginForm" method="POST" action="/login">
+            <input
+                type="text"
+                id="userId"
+                name="userId"
+                placeholder="이름을 입력하세요"
+                required
+                autofocus
+            >
+            <input
+                type="text"
+                id="password"
+                name="password"
+                placeholder="생년월일 6자리 (예: 990315)"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                inputmode="numeric"
+                required
+            >
+            <button type="submit">로그인</button>
+        </form>
+    </div>
+
+    <script src="/js/SerialController.js"></script>
+    <script type="module">
+        // SerialController 인스턴스 생성
+        const serialController = new SerialController();
+
+        // 시리얼 UI 요소
+        const serialControls = document.querySelector('.serial-controls');
+        const connectBtn = document.getElementById('connectBtn');
+        const serialTestBtn = document.getElementById('serialTestBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const serialStatus = document.getElementById('serialStatus');
+
+        // 시리얼 연결 버튼 이벤트
+        connectBtn.addEventListener('click', async () => {
+            const success = await serialController.connect();
+            if (success) {
+                serialStatus.textContent = '연결됨';
+                serialStatus.classList.remove('disconnected');
+                serialStatus.classList.add('connected');
+                connectBtn.classList.add('connected');
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                alert('ESP32 연결에 실패했습니다. 다시 시도해주세요.');
+            }
+        });
+
+        // 시리얼 통신 테스트 버튼 이벤트
+        serialTestBtn.addEventListener('click', () => {
+            window.location.href = '/serial-test.html';
+        });
+
+        // 시리얼 연결 해제 버튼 이벤트
+        disconnectBtn.addEventListener('click', async () => {
+            await serialController.disconnect();
+            serialStatus.textContent = '연결 안됨';
+            serialStatus.classList.remove('connected');
+            serialStatus.classList.add('disconnected');
+            connectBtn.classList.remove('connected');
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+        });
+
+        // Q 키로 시리얼 디버깅 패널 토글
+        let isSerialPanelVisible = true;
+        document.addEventListener('keydown', (event) => {
+            // Q 키 또는 q 키를 눌렀을 때
+            if (event.key === 'q' || event.key === 'Q') {
+                // 입력 필드에 포커스가 있으면 무시 (예: 텍스트 입력 중)
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+                
+                isSerialPanelVisible = !isSerialPanelVisible;
+                if (isSerialPanelVisible) {
+                    serialControls.classList.remove('hidden');
+                    console.log('[디버깅] 시리얼 패널 표시');
+                } else {
+                    serialControls.classList.add('hidden');
+                    console.log('[디버깅] 시리얼 패널 숨김');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
