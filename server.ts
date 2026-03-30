@@ -989,7 +989,9 @@ app.post("/api/generate-summary", async (req, res) => {
 });
 
 // ─── 서버 시작 ───
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`[Server] Server running at http://localhost:${PORT}`);
+// Railway 등 PaaS: PORT 환경 변수 사용, 0.0.0.0 바인딩 필수(외부 헬스체크 통과)
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST ?? "0.0.0.0";
+server.listen(PORT, HOST, () => {
+  console.log(`[Server] listening on http://${HOST}:${PORT}`);
 });
