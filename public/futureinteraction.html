@@ -417,6 +417,42 @@
             speaking: { direction: 1, rafId: null, active: false }
         };
 
+        async function pingPongPlay(video, stateKey, tag) {
+            if (!pingPongState[stateKey].active) return;
+            try {
+                await video.play();
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.warn(`[PingPong] ${tag}:`, e);
+                    return;
+                }
+                await new Promise((r) => requestAnimationFrame(r));
+                await new Promise((r) => requestAnimationFrame(r));
+                if (!pingPongState[stateKey].active) return;
+                try {
+                    await video.play();
+                } catch (e2) {
+                    if (document.visibilityState !== 'visible') return;
+                    await new Promise((r) => setTimeout(r, 200));
+                    if (pingPongState[stateKey].active) {
+                        video.play().catch(() => {});
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            for (const stateKey of ['listening', 'speaking']) {
+                const state = pingPongState[stateKey];
+                if (!state.active || state.direction !== 1 || state.rafId) continue;
+                const video = stateKey === 'listening' ? listeningVideo : speakingVideo;
+                if (video?.classList.contains('active') && video.paused && video.src) {
+                    pingPongPlay(video, stateKey, `${stateKey} visibility`);
+                }
+            }
+        });
+
         function startPingPong(video, stateKey) {
             const state = pingPongState[stateKey];
             // 이전 ping-pong 중지
@@ -435,8 +471,7 @@
             // 정방향 재생 시작 (렌더링 후 play하여 브라우저 background media 차단 회피)
             video.playbackRate = 1;
             setTimeout(() => {
-                if (!state.active) return;
-                video.play().catch(e => console.warn(`[PingPong] ${stateKey} play error:`, e));
+                pingPongPlay(video, stateKey, stateKey);
             }, 50);
         }
 
@@ -458,7 +493,7 @@
                     video.currentTime = 0;
                     state.direction = 1;
                     video.playbackRate = 1;
-                    video.play().catch(e => console.error(`[PingPong] ${stateKey} play error:`, e));
+                    pingPongPlay(video, stateKey, `${stateKey} reverse-end`);
                     return;
                 }
 

@@ -2,11 +2,17 @@ import "dotenv/config";
 import * as fs from "fs";
 import * as fsPromises from "fs/promises";
 import * as path from "path";
+import { fileURLToPath } from "url";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROMPTS_DIR = path.join(__dirname, "prompts");
+
+function getOpenAI(): OpenAI {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  if (!key) throw new Error("OPENAI_API_KEY missing");
+  return new OpenAI({ apiKey: key });
+}
 
 let conversationHistory: Array<{ role: "user" | "assistant" | "system"; content: string }> = [];
 
@@ -34,8 +40,8 @@ function flattenValues(obj: any, visited = new Set()): string {
 
 /** system.json 내 {{변수}}를 prompt.json 값으로 치환하여 최종 시스템 프롬프트 생성 */
 async function buildSystemInstruction(): Promise<string> {
-  const system = await readJSON("./modules/LLM/prompts/system.json");
-  const vars = await readJSON("./modules/LLM/prompts/prompt.json");
+  const system = await readJSON(path.join(PROMPTS_DIR, "system.json"));
+  const vars = await readJSON(path.join(PROMPTS_DIR, "prompt.json"));
 
   // 고정 변수 (사용자 변경과 무관하게 유지)
   const fixedVars: Record<string, string> = {
@@ -115,8 +121,14 @@ export async function getResponse(message: string): Promise<string> {
 
     conversationHistory.push({ role: "assistant", content: response });
     return response;
-  } catch (error) {
-    console.error("Error in fetching response from OpenAI:", error);
+  } catch (error: unknown) {
+    const err = error as { message?: string; status?: number; code?: string };
+    console.error(
+      "[getResponse]",
+      err?.message ?? String(error),
+      err?.status != null ? `status=${err.status}` : "",
+      err?.code ?? ""
+    );
     return "미안, 지금은 답을 만들기 어려워.";
   }
 }

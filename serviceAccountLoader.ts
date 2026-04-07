@@ -1,14 +1,18 @@
 import "dotenv/config";
+import { createRequire } from "module";
+import path from "path";
+import { fileURLToPath } from "url";
 
-/**
- * Firebase / GCP 서비스 계정 — 환경 변수 FIREBASE_SERVICE_ACCOUNT_JSON (JSON 문자열 전체)
- */
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 export function loadServiceAccount(): Record<string, unknown> {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (raw === undefined || String(raw).trim() === "") {
-    throw new Error(
-      "FIREBASE_SERVICE_ACCOUNT_JSON 환경 변수에 서비스 계정 JSON 전체를 설정하세요."
-    );
+  if (raw !== undefined && String(raw).trim() !== "") {
+    return JSON.parse(String(raw).trim()) as Record<string, unknown>;
   }
-  return JSON.parse(String(raw)) as Record<string, unknown>;
+  return require(path.join(__dirname, "secretAccountKey.json")) as Record<
+    string,
+    unknown
+  >;
 }
