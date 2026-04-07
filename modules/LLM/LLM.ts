@@ -1,5 +1,4 @@
 import "dotenv/config";
-import * as fs from "fs";
 import * as fsPromises from "fs/promises";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -107,7 +106,7 @@ export async function getResponse(message: string): Promise<string> {
 
     truncateHistoryIfNeeded();
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemInstruction },
@@ -139,7 +138,7 @@ export async function getInitiation(): Promise<string> {
     
     conversationHistory = []; // 첫 인사 전 기록 초기화
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemInstruction },
@@ -154,8 +153,14 @@ export async function getInitiation(): Promise<string> {
     // out = humanize(out);
     // out = sanitizeOutput(out);
     return out;
-  } catch (error) {
-    console.error("Error in fetching response from OpenAI:", error);
+  } catch (error: unknown) {
+    const err = error as { message?: string; status?: number; code?: string };
+    console.error(
+      "[getInitiation]",
+      err?.message ?? String(error),
+      err?.status != null ? `status=${err.status}` : "",
+      err?.code ?? ""
+    );
     return "미안, 지금은 시작 인사를 만들기 어렵네.";
   }
 }
@@ -174,7 +179,7 @@ export async function getEnding(message: string): Promise<string> {
     truncateHistoryIfNeeded();
 
     console.log("[getEnding] OpenAI API 호출 시작");
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemInstruction },
