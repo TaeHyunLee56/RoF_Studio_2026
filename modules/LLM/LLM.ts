@@ -173,7 +173,7 @@ export async function getEnding(message: string): Promise<string> {
 
     conversationHistory.push({
       role: "user",
-      content: `'음... 아쉽게도 오늘 대화는 여기까지야. 잘 지내고 다음에 또 얘기하자'라고 끝인사를 해. ${message}`,
+      content: `${message}에 답변한 후 '음... 아쉽게도 오늘 대화는 여기까지야. 잘 지내고 다음에 또 얘기하자'라고 끝인사를 해.`,
     });
 
     truncateHistoryIfNeeded();
