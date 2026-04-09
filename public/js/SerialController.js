@@ -43,8 +43,10 @@ class SerialController {
             }
 
             this.device = await navigator.bluetooth.requestDevice({
-                filters: [{ services: [NUS_SERVICE_UUID] }],
-                optionalServices: [NUS_SERVICE_UUID]
+                filters: [
+                    { services: [NUS_SERVICE_UUID] },
+                    { name: 'ESP32_LED' }
+                ]
             });
 
             if (!this.device) {
