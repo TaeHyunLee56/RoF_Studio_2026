@@ -125,6 +125,106 @@
         .serial-controls.hidden {
             display: none;
         }
+
+        /* 하단 사용자 바 */
+        #userBar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(30, 30, 30, 0.95);
+            border-top: 1px solid rgba(150, 150, 150, 0.15);
+            backdrop-filter: blur(12px);
+            padding: 12px 0 16px;
+            z-index: 900;
+        }
+
+        #userBar h3 {
+            color: #aaa;
+            font-size: 0.75em;
+            margin: 0 0 10px 20px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .user-items {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0 20px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .user-items::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .user-items::-webkit-scrollbar-thumb {
+            background: rgba(150, 150, 150, 0.3);
+            border-radius: 2px;
+        }
+
+        .user-card {
+            flex-shrink: 0;
+            width: 100px;
+            height: 100px;
+            background: rgba(131, 131, 131, 0.2);
+            border: 1px solid rgba(150, 150, 150, 0.2);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            scroll-snap-align: start;
+            user-select: none;
+        }
+
+        .user-card:hover {
+            background: rgba(166, 26, 30, 0.2);
+            border-color: rgba(166, 26, 30, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .user-card:active {
+            transform: scale(0.96);
+        }
+
+        .user-card .user-name {
+            color: #f0f0f0;
+            font-size: 0.88em;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.2;
+            max-width: 85px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-card .user-birth {
+            color: #888;
+            font-size: 0.68em;
+            white-space: nowrap;
+        }
+
+        .user-card.loading-card {
+            cursor: default;
+            color: #888;
+            font-size: 0.78em;
+            width: 200px;
+        }
+
+        .user-card.loading-card:hover {
+            background: rgba(131, 131, 131, 0.2);
+            border-color: rgba(150, 150, 150, 0.2);
+            transform: none;
+        }
     </style>
 </head>
 <body>
@@ -160,8 +260,77 @@
         </form>
     </div>
 
+    <div id="userBar">
+        <h3>최근 사용자</h3>
+        <div class="user-items" id="userItems">
+            <div class="user-card loading-card">불러오는 중...</div>
+        </div>
+    </div>
+
     <script src="/js/SerialController.js"></script>
     <script type="module">
+        // 최근 사용자 목록 로드
+        async function loadUserList() {
+            const container = document.getElementById('userItems');
+            try {
+                const res = await fetch('/api/users');
+                const data = await res.json();
+                if (!data.success || !data.users.length) {
+                    container.innerHTML = '<div class="user-card loading-card">등록된 사용자 없음</div>';
+                    return;
+                }
+                container.innerHTML = '';
+                data.users.forEach(user => {
+                    const card = document.createElement('div');
+                    card.className = 'user-card';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'user-name';
+                    nameSpan.textContent = user.name;
+
+                    const birthSpan = document.createElement('span');
+                    birthSpan.className = 'user-birth';
+                    if (user.birth) {
+                        const y = user.birth.substring(0, 2);
+                        const m = user.birth.substring(2, 4);
+                        const d = user.birth.substring(4, 6);
+                        birthSpan.textContent = `${y}.${m}.${d}`;
+                    } else {
+                        birthSpan.textContent = '-';
+                    }
+
+                    card.appendChild(nameSpan);
+                    card.appendChild(birthSpan);
+                    card.addEventListener('click', () => adminLogin(user.id));
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                console.error('유저 목록 로드 실패:', e);
+                container.innerHTML = '<div class="user-card loading-card">불러오기 실패</div>';
+            }
+        }
+
+        async function adminLogin(internalId) {
+            try {
+                const res = await fetch('/api/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ internalId }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = data.redirectUrl;
+                } else {
+                    alert(data.message || '로그인 실패');
+                }
+            } catch (e) {
+                console.error('관리자 로그인 오류:', e);
+                alert('로그인 중 오류가 발생했습니다.');
+            }
+        }
+
+        loadUserList();
+
         // SerialController 인스턴스 생성
         const serialController = new SerialController();
 

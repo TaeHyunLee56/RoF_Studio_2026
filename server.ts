@@ -148,6 +148,11 @@ app.post("/login", async (req, res) => {
     req.session.userId = internalId;
     console.log(`[Login] Logged in: ${internalId}`);
 
+    // lastLoginAt 타임스탬프 업데이트
+    await firestore.collection("users").doc(internalId).update({
+      lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     // 백그라운드에서 voice 준비 (비동기로 실행, 응답은 기다리지 않음)
     prepareUserVoice(internalId).catch((error) => {
       console.error(`Voice 준비 중 오류 (userId: ${internalId}):`, error);
@@ -185,6 +190,69 @@ app.get("/api/current-user", (req, res) => {
     return res.status(401).json({ success: false, message: "Not logged in" });
   }
   res.json({ success: true, userId: req.session.userId });
+});
+
+// ─── 유저 목록 API (관리자용) ───
+app.get("/api/users", async (_req, res) => {
+  try {
+    const snapshot = await firestore.collection("users").get();
+    const users = snapshot.docs
+      .map((doc: any) => {
+        const data = doc.data();
+        const createdAt = data.createdAt ?? null;
+        const createdTime = createdAt ? new Date(createdAt).getTime() : 0;
+        const lastUnderscore = doc.id.lastIndexOf("_");
+        const name = doc.id.substring(0, lastUnderscore);
+        const birth = doc.id.substring(lastUnderscore + 1);
+        return {
+          id: doc.id,
+          name,
+          birth,
+          createdAt: createdAt || null,
+          _sortTime: createdTime,
+        };
+      })
+      .sort((a: any, b: any) => b._sortTime - a._sortTime)
+      .map(({ _sortTime, ...rest }: any) => rest);
+    res.json({ success: true, users });
+  } catch (err: any) {
+    console.error("[GET /api/users ERROR]", err);
+    res.status(500).json({ success: false, message: "서버 오류" });
+  }
+});
+
+app.post("/api/admin-login", async (req, res) => {
+  const { internalId } = req.body;
+  if (!internalId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "internalId 필요" });
+  }
+
+  try {
+    const doc = await firestore.collection("users").doc(internalId).get();
+    if (!doc.exists) {
+      return res
+        .status(404)
+        .json({ success: false, message: "유저 없음" });
+    }
+
+    req.session.userId = internalId;
+    console.log(`[Admin Login] Logged in as: ${internalId}`);
+
+    await firestore.collection("users").doc(internalId).update({
+      lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    prepareUserVoice(internalId).catch((error) => {
+      console.error(`Voice 준비 중 오류 (userId: ${internalId}):`, error);
+    });
+
+    res.json({ success: true, redirectUrl: "/futureinteraction.html" });
+  } catch (err: any) {
+    console.error("[ADMIN LOGIN ERROR]", err);
+    res.status(500).json({ success: false, message: "서버 오류" });
+  }
 });
 
 // ─── 페르소나 데이터 API ───
