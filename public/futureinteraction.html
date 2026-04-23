@@ -20,45 +20,6 @@
             overflow: hidden;
         }
 
-        /* Future.html 스타일 */
-        .welcome-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-            text-align: center;
-        }
-
-        .welcome-line {
-            color: white;
-            text-align: center;
-            font-size: 1.8em;
-            margin: 20px 0;
-            opacity: 0;
-            display: none;
-        }
-
-        .welcome-line.show {
-            display: block;
-            animation: fadeInUp 1s ease-out forwards;
-        }
-
-        #line2.show {
-            animation-delay: 0.5s;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
         .main-button {
             background: linear-gradient(45deg, #A61A1E, #A61A1E);
             color: white;
@@ -67,13 +28,12 @@
             border-radius: 30px;
             cursor: pointer;
             font-size: 1.2em;
-            transition: transform 0.2s ease, opacity 0.3s ease;
+            transition: opacity 0.3s ease;
             opacity: 0.7;
             box-shadow: 0 4px 15px rgba(166, 26, 30, 0.3);
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 20px;
+            left: 20px;
             z-index: 1001;
         }
 
@@ -87,7 +47,6 @@
             opacity: 0.4;
         }
 
-        .welcome-container.hidden,
         .main-button.hidden {
             display: none;
         }
@@ -234,12 +193,6 @@
         <a href="/board-controller.html" target="_blank" rel="noopener">보드 2 연결 탭</a>
     </div>
 
-    <!-- Future.html UI (초기 화면) -->
-    <div class="welcome-container" id="welcomeContainer">
-        <h3 id="line1" class="welcome-line">이제 미래의 나를 만날 준비가 모두 끝났습니다.</h3>
-        <h3 id="line2" class="welcome-line">스튜디오 안으로 입장해주세요.</h3>
-    </div>
-
     <button id="mainButton" class="main-button">
         대화하기
     </button>
@@ -279,7 +232,6 @@
         const BACKGROUND_MUSIC_LOW_VOLUME = 0.15;
 
         // DOM 요소
-        const welcomeContainer = document.getElementById('welcomeContainer');
         const mainButton = document.getElementById('mainButton');
         const videoContainer = document.getElementById('videoContainer');
         const tunnelVideo = document.getElementById('tunnelVideo');
@@ -287,10 +239,9 @@
         const speakingVideo = document.getElementById('speakingVideo');
         const closingVideo = document.getElementById('closingVideo');
         const backgroundMusic = document.getElementById('backgroundMusic');
-        const line1 = document.getElementById('line1');
-        const line2 = document.getElementById('line2');
         const blackoutScreen = document.getElementById('blackoutScreen');
         const logoutButton = document.getElementById('logoutButton');
+
 
         // 대화하기 버튼 이벤트
         mainButton.addEventListener('click', startConversation);
@@ -306,10 +257,6 @@
 
                 // 버튼 숨기기
                 mainButton.style.display = "none";
-
-                // 멘트 표시
-                line1.classList.add("show");
-                line2.classList.add("show");
 
                 // exhibPersona 자동 선택
                 const selectedPersona = "exhibPersona";
@@ -363,7 +310,6 @@
 
                     // 비디오 컨테이너 표시
                     videoContainer.classList.remove('hidden');
-                    welcomeContainer.classList.add('hidden');
 
                     // 페르소나 선택 이벤트 처리 (자체 처리)
                     await handlePersonaSelected({
