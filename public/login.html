@@ -15,9 +15,13 @@
 
         #login {
             position: fixed;
-            top: 0;
+            bottom: 0;
             left: 0;
+            right: 0;
             padding: 16px 20px;
+            background: rgba(30, 30, 30, 0.95);
+            border-top: 1px solid rgba(150, 150, 150, 0.15);
+            backdrop-filter: blur(12px);
         }
 
         #login form {
@@ -52,7 +56,7 @@
             background: linear-gradient(45deg, #A61A1E, #A61A1E);
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 10px 32px;
             border-radius: 8px;
             font-size: 0.9em;
             cursor: pointer;
@@ -126,16 +130,13 @@
             display: none;
         }
 
-        /* 하단 사용자 바 */
+        /* 상단 사용자 바 */
         #userBar {
             position: fixed;
-            bottom: 0;
+            top: 0;
             left: 0;
             right: 0;
-            background: rgba(30, 30, 30, 0.95);
-            border-top: 1px solid rgba(150, 150, 150, 0.15);
-            backdrop-filter: blur(12px);
-            padding: 12px 0 16px;
+            padding: 16px 0 12px;
             z-index: 900;
         }
 
@@ -228,8 +229,8 @@
     </style>
 </head>
 <body>
-    <!-- 시리얼 연결 컨트롤 -->
-    <div class="serial-controls">
+    <!-- 시리얼 연결 컨트롤 (Q키로 토글) -->
+    <div class="serial-controls hidden">
         <div class="serial-status disconnected" id="serialStatus">연결 안됨</div>
         <button class="serial-btn" id="connectBtn">ESP32 연결</button>
         <button class="serial-btn" id="serialTestBtn">시리얼 통신 테스트</button>
@@ -373,7 +374,7 @@
         });
 
         // Q 키로 시리얼 디버깅 패널 토글
-        let isSerialPanelVisible = true;
+        let isSerialPanelVisible = false;
         document.addEventListener('keydown', (event) => {
             // Q 키 또는 q 키를 눌렀을 때
             if (event.key === 'q' || event.key === 'Q') {
