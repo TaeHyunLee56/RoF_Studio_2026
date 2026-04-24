@@ -33,7 +33,7 @@ const firestore = admin.firestore();
 
 // 만 13세 미만 사용자용 STS 전용 목소리
 const STS_MALE_VOICE_ID = process.env.ELEVENLABS_STS_MALE_VOICE_ID || 'Ir7oQcBXWiq4oFGROCfj';
-const STS_FEMALE_VOICE_ID = process.env.ELEVENLABS_STS_FEMALE_VOICE_ID || 'yM93hbw8Qtvdma2wCnJG';
+const STS_FEMALE_VOICE_ID = process.env.ELEVENLABS_STS_FEMALE_VOICE_ID || 'jAAHNNqlbAX9iWjJPEtE';
 
 function isUnderThirteen(userId: string): boolean {
   const lastUnderscore = userId.lastIndexOf("_");
