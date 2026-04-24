@@ -31,6 +31,42 @@ admin.initializeApp({
 
 const firestore = admin.firestore();
 
+// 만 13세 미만 사용자용 STS 전용 목소리
+const STS_MALE_VOICE_ID = process.env.ELEVENLABS_STS_MALE_VOICE_ID || 'Ir7oQcBXWiq4oFGROCfj';
+const STS_FEMALE_VOICE_ID = process.env.ELEVENLABS_STS_FEMALE_VOICE_ID || 'yM93hbw8Qtvdma2wCnJG';
+
+function isUnderThirteen(userId: string): boolean {
+  const lastUnderscore = userId.lastIndexOf("_");
+  if (lastUnderscore === -1) return false;
+  const birth = userId.substring(lastUnderscore + 1);
+  if (birth.length !== 6) return false;
+  const yy = parseInt(birth.substring(0, 2), 10);
+  const mm = parseInt(birth.substring(2, 4), 10);
+  const dd = parseInt(birth.substring(4, 6), 10);
+  const currentYY = new Date().getFullYear() % 100;
+  const fullYear = yy <= currentYY ? 2000 + yy : 1900 + yy;
+  const birthDate = new Date(fullYear, mm - 1, dd);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age < 13;
+}
+
+async function getGenderFromFirestore(userId: string): Promise<string> {
+  try {
+    const doc = await firestore
+      .collection("responses")
+      .doc(userId)
+      .collection("default")
+      .doc("data")
+      .get();
+    return doc.exists ? (doc.data()?.gender ?? "male") : "male";
+  } catch {
+    return "male";
+  }
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -95,7 +131,10 @@ app.use("/media-proxy", async (req, res) => {
     }
 
     const body = upstream.body as import("stream/web").ReadableStream<Uint8Array>;
-    Readable.fromWeb(body).pipe(res);
+    const readable = Readable.fromWeb(body);
+    readable.on("error", () => { res.destroy(); });
+    res.on("close", () => { readable.destroy(); });
+    readable.pipe(res);
   } catch (err) {
     console.error("[media-proxy]", targetUrl, err);
     if (!res.headersSent) {
@@ -706,9 +745,16 @@ async function synthesizeSpeechToBase64(
   try {
     console.log(`[TTS] 음성 생성 시작 - userId: ${userId}`);
     
-    // 1. 음성 검색
-    let voiceId = await findVoiceByUserId(userId);
-    console.log(`[TTS] ElevenLabs 음성 검색 결과 - voiceId: ${voiceId || '없음'}`);
+    // 1. 음성 검색 (만 13세 미만이면 STS 전용 목소리 사용)
+    let voiceId: string | null = null;
+    if (isUnderThirteen(userId)) {
+      const gender = await getGenderFromFirestore(userId);
+      voiceId = gender === "female" ? STS_FEMALE_VOICE_ID : STS_MALE_VOICE_ID;
+      console.log(`[TTS] 만 13세 미만 - gender: ${gender}, voiceId: ${voiceId}`);
+    } else {
+      voiceId = await findVoiceByUserId(userId);
+      console.log(`[TTS] ElevenLabs 음성 검색 결과 - voiceId: ${voiceId || '없음'}`);
+    }
 
     // 2. 음성이 없으면 Firestore에서 가져와서 생성
     if (!voiceId) {
